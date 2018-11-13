@@ -1,7 +1,9 @@
 let gl
+let width = window.innerWidth;
+//由于页面高度并不是100%所以。。。
+let height = window.innerHeight*9/10;
 const vsSource = `
 attribute vec4 aVertexPosition;
-
 uniform mat4 uModelViewMatrix;
 uniform mat4 uProjectionMatrix;
 
@@ -32,11 +34,59 @@ function createShader(gl, type, source) {
   return shader;
 }
 
+function drawScene(gl, programInfo, buffer) {
+  //计算矩阵转换
+  let projectionMatrix = mat4.create();
+  mat4.perspective(projectionMatrix,
+    45,
+    width / height,
+    0.1,
+    200.0);
+  const modelViewMatrix = mat4.create();
+  mat4.translate(modelViewMatrix, // destination matrix
+    modelViewMatrix, // matrix to translate
+    [-0.0, 0.0, -6.0]);
+  
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  //指定定点参数及数据格式
+  gl.vertexAttribPointer(programInfo.attribLocations.vertexPosition, 3, gl.FLOAT, false, 0, 0);
+  //启用定点参数
+  gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
+  //设置shader程序
+  gl.useProgram(programInfo.program);
+  //指定一个uniform矩阵变量
+  gl.uniformMatrix4fv(
+    programInfo.uniformLocations.projectionMatrix,
+    false,
+    projectionMatrix);
+  gl.uniformMatrix4fv(
+    programInfo.uniformLocations.modelViewMatrix,
+    false,
+    modelViewMatrix);
+  //指定绘制
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+}
+
+//构建buffer
+function initBuffer() {
+  let buffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  var vertices = [
+    1.0, 1.0, 0.0,
+    -1.0, 1.0, 0.0,
+    1.0, -1.0, 0.0,
+    -1.0, -1.0, 0.0
+  ];
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+  return buffer;  
+}
+
+
 function mian() {
   let canvas = document.querySelector("#webgl");
   gl = canvas.getContext("webgl");
+  gl.clearColor(0.0, 0.0, 0.0, 1.0)
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  console.log("this code is running")
   //创建着色器
   let vertexShader = createShader(gl, gl.VERTEX_SHADER, vsSource);
   let fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
@@ -62,54 +112,6 @@ function mian() {
   //设置视角比例
   let buffer = initBuffer();
   drawScene(gl, programInfo, buffer);
-
-
 }
 
-function drawScene(gl, programInfo, buffer) {
-
-  //清除颜色
-  gl.clearColor(0.0, 0.0, 0.0, 1.0)
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  //计算矩阵转换
-  let projectionMatrix = mat4.create();
-  mat4.perspective(projectionMatrix,
-    45,
-    640.0 / 480.0,
-    0.1,
-    100.0);
-  const modelViewMatrix = mat4.create();
-  mat4.translate(modelViewMatrix, // destination matrix
-    modelViewMatrix, // matrix to translate
-    [-0.0, 0.0, -6.0]);
-
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-  gl.vertexAttribPointer(programInfo.attribLocations.vertexPosition, 3, gl.FLOAT, false, 0, 0);
-  gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
-  gl.useProgram(programInfo.program);
-  gl.uniformMatrix4fv(
-    programInfo.uniformLocations.projectionMatrix,
-    false,
-    projectionMatrix);
-  gl.uniformMatrix4fv(
-    programInfo.uniformLocations.modelViewMatrix,
-    false,
-    modelViewMatrix);
-    console.log("a")
-  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-}
-
-//构建buffer
-function initBuffer() {
-  let buffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-  var vertices = [
-    1.0, 1.0, 0.0,
-    -1.0, 1.0, 0.0,
-    1.0, -1.0, 0.0,
-    -1.0, -1.0, 0.0
-  ];
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-  return buffer;  
-}
 mian();
