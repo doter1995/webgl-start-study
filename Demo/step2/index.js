@@ -3,18 +3,18 @@ let width = window.innerWidth;
 //由于页面高度并不是100%所以。。。
 let height = window.innerHeight * 9 / 10;
 const vsSource = `
-attribute vec4 aVertexPosition;
-attribute vec4 aVertexColor;
+  attribute vec4 aVertexPosition;
+  attribute vec4 aVertexColor;
 
-uniform mat4 uModelViewMatrix;
-uniform mat4 uProjectionMatrix;
+  uniform mat4 uModelViewMatrix;
+  uniform mat4 uProjectionMatrix;
 
-varying lowp vec4 vColor;
+  varying lowp vec4 vColor;
 
-void main() {
-  gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-  vColor = aVertexColor;
-}
+  void main() {
+    gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+    vColor = aVertexColor;
+  }
 `;
 
 const fsSource = `
