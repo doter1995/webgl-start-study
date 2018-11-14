@@ -1,20 +1,27 @@
 let gl
 let width = window.innerWidth;
 //由于页面高度并不是100%所以。。。
-let height = window.innerHeight*9/10;
+let height = window.innerHeight * 9 / 10;
 const vsSource = `
 attribute vec4 aVertexPosition;
+attribute vec4 aVertexColor;
+
 uniform mat4 uModelViewMatrix;
 uniform mat4 uProjectionMatrix;
 
+varying lowp vec4 vColor;
+
 void main() {
   gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+  vColor = aVertexColor;
 }
 `;
 
 const fsSource = `
-  void main() {
-    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+  varying lowp vec4 vColor;
+
+  void main(void) {
+    gl_FragColor = vColor;
   }
 `;
 
@@ -34,7 +41,7 @@ function createShader(gl, type, source) {
   return shader;
 }
 
-function drawScene(gl, programInfo, buffer) {
+function drawScene(gl, programInfo, bufferData) {
   //计算矩阵转换
   let projectionMatrix = mat4.create();
   mat4.perspective(projectionMatrix,
@@ -46,12 +53,17 @@ function drawScene(gl, programInfo, buffer) {
   mat4.translate(modelViewMatrix, // destination matrix
     modelViewMatrix, // matrix to translate
     [-0.0, 0.0, -6.0]);
-  
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  //
+  gl.bindBuffer(gl.ARRAY_BUFFER, bufferData.position);
+  gl.bindBuffer(gl.ARRAY_BUFFER, bufferData.colorBuffer);
   //指定定点参数及数据格式
-  gl.vertexAttribPointer(programInfo.attribLocations.vertexPosition, 3, gl.FLOAT, false, 0, 0);
+  gl.vertexAttribPointer(programInfo.attribLocations.vertexPosition, 2, gl.FLOAT, false, 0, 0);
   //启用定点参数
   gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
+
+  gl.vertexAttribPointer(programInfo.attribLocations.colorPosition, 4, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(programInfo.attribLocations.colorPosition);
+
   //设置shader程序
   gl.useProgram(programInfo.program);
   //指定一个uniform矩阵变量
@@ -70,15 +82,27 @@ function drawScene(gl, programInfo, buffer) {
 //构建buffer
 function initBuffer() {
   let buffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-  var vertices = [
-    1.0, 1.0, 0.0,
-    -1.0, 1.0, 0.0,
-    1.0, -1.0, 0.0,
-    -1.0, -1.0, 0.0
+  let colorBuffer = gl.createBuffer();
+  const vertices = [
+    1.0, 1.0,
+    -1.0, 1.0,
+    1.0, -1.0,
+    -1.0, -1.0,
   ];
+  var colors = [
+    1.0, 1.0, 1.0, 1.0, // 白色
+    1.0, 0.0, 0.0, 1.0, // 红色
+    0.0, 1.0, 0.0, 1.0, // 绿色
+    0.0, 0.0, 1.0, 1.0 // 蓝色
+  ];
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-  return buffer;  
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+  return {
+    position: buffer,
+    colorBuffer: colorBuffer
+  };
 }
 
 
@@ -103,6 +127,7 @@ function mian() {
     program: shaderProgram,
     attribLocations: {
       vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
+      colorPosition: gl.getAttribLocation(shaderProgram, "aVertexColor")
     },
     uniformLocations: {
       projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
@@ -110,8 +135,8 @@ function mian() {
     },
   };
   //设置视角比例
-  let buffer = initBuffer();
-  drawScene(gl, programInfo, buffer);
+  let bufferData = initBuffer();
+  drawScene(gl, programInfo, bufferData);
 }
 
 mian();
