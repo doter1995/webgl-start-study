@@ -31,6 +31,7 @@ vertexShader和fragmentShader
 | ---| :--------  | -----   | :----: |
 
 #### Setting and getting state
+
 | 返回 | 方法        | 功能    |  版本  |
 | ---| :--------  | -----   | :----: |
 
@@ -92,6 +93,9 @@ vertexShader和fragmentShader
 | ---| :--------  | -----   | :----: |
 
 #### Uniforms and attributes
+
 #### Texture objects
+
 #### Writing to the drawing buffer
+
 #### Reading back pixels
