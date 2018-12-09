@@ -1,8 +1,8 @@
-# WebGL绘制
+# GLSL
 
-> 常见的绘制思路
+> 是由一对shader组成的着色器程序，属于强类型语言，该程序是运行在GPU上的。
 
-## 
+## GLSL常见数据
 
 ### Buffer And Attribute
 
