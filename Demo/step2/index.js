@@ -54,12 +54,12 @@ function createProgram(gl) {
   console.error("create Program is error");
 }
 
-function drawScene(gl, programInfo) {
+function drawScene(gl, programInfo,buffer,colorBuffer) {
   // gl.viewport(0,0,width,height); 
   //计算矩阵转换
   let projectionMatrix = mat4.create();
   mat4.perspective(projectionMatrix,
-    45,
+    45 * Math.PI / 180,
     width / height,
     0.1,
     200.0);
@@ -70,17 +70,22 @@ function drawScene(gl, programInfo) {
 
   //指定定点参数及数据格式
   // 告诉属性怎么从positionBuffer中读取数据 (ARRAY_BUFFER)
-  var size = 3; // 每次迭代运行提取两个单位数据
+  var size = 3; // 每次迭代运行提取3个单位数据
   var type = gl.FLOAT; // 每个单位的数据类型是32位浮点型
   var normalize = false; // 不需要归一化数据
   var stride = 0; // 0 = 移动单位数量 * 每个单位占用内存（sizeof(type)）
   // 每次迭代运行运动多少内存到下一个数据开始点
   var offset = 0; // 从缓冲起始位置开始读取
+  //起初忘了在这里重新绑定数据。导致后面计算的角度发生错误。
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
   gl.vertexAttribPointer(
     programInfo.attribLocations.vertexPosition, size, type, normalize, stride, offset)
   //启用定点参数
   gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
-  gl.vertexAttribPointer(programInfo.attribLocations.colorValue, 3, type, normalize, stride, offset)
+
+  //起初忘了在这里重新绑定数据。导致后面计算的角度发生错误。
+  gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+  gl.vertexAttribPointer(programInfo.attribLocations.colorValue, 4, type, normalize, stride, offset)
   gl.enableVertexAttribArray(programInfo.attribLocations.colorValue);
   //设置shader程序
   gl.useProgram(programInfo.program);
@@ -101,24 +106,25 @@ function drawScene(gl, programInfo) {
 }
 
 //构建buffer
-function initBuffer() {
+function initBuffer(gl) {
   let buffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  
   var vertices = [
     1.0, 1.0, 0.0,
     -1.0, 1.0, 0.0,
     1.0, -1.0, 0.0,
     -1.0, -1.0, 0.0
   ];
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
   return buffer;
 }
 //构建颜色Buffer
-function initColorBuffer() {
+function initColorBuffer(gl) {
   let colorBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
   var colors = [
-    1.0, .9, 1.0, 1.0, // 白色
+    1.0, 1.0, 1.0, 1.0, // 白色
     1.0, 0.0, 0.0, 1.0, // 红色
     0.0, 1.0, 0.0, 1.0, // 绿色
     0.0, 0.0, 1.0, 1.0 // 蓝色
@@ -147,11 +153,9 @@ function mian() {
     },
   };
   //设置视角比例
-  let buffer = initBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-  let colorBuffer = initColorBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-  drawScene(gl, programInfo);
+  var buffer = initBuffer(gl);
+  var colorBuffer = initColorBuffer(gl);
+  drawScene(gl, programInfo,buffer,colorBuffer);
 }
 
 mian();

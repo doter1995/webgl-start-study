@@ -61,7 +61,7 @@ function drawScene(gl, programInfo) {
   const modelViewMatrix = mat4.create();
   mat4.translate(modelViewMatrix, // destination matrix
     modelViewMatrix, // matrix to translate
-    [-0.0, 0.0, -6.0]);
+    [-0.0, 0.0, -4.0]);
 
   //指定定点参数及数据格式
   // 告诉属性怎么从positionBuffer中读取数据 (ARRAY_BUFFER)
