@@ -1,43 +1,31 @@
-let vsSource = `
-attribute vec2 a_position;
-attribute vec2 a_texCoord;
+//尝试二维矩阵转换
 
-uniform vec2 u_resolution;
+let gl
+let width = window.innerWidth;
+let tx = 0,
+  ty = 0;
+//由于页面高度并不是100%所以。。。
+let height = window.innerHeight * 9 / 10;
+const vsSource = `
+attribute vec4 aVertexPosition;
+attribute vec4 colorValue;
 
-varying vec2 v_texCoord;
+uniform mat4 uModelViewMatrix;
+uniform mat4 uProjectionMatrix;
 
+varying lowp vec4 vColor;
 void main() {
-   // convert the rectangle from pixels to 0.0 to 1.0
-   vec2 zeroToOne = a_position / u_resolution;
-
-   // convert from 0->1 to 0->2
-   vec2 zeroToTwo = zeroToOne * 1.0;
-
-   // convert from 0->2 to -1->+1 (clipspace)
-   vec2 clipSpace = zeroToTwo - 2.0;
-
-   gl_Position = vec4(clipSpace * vec2(1, -1), 0, 4);
-
-   // pass the texCoord to the fragment shader
-   // The GPU will interpolate this value between points.
-   v_texCoord = a_texCoord;
+  gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+  vColor = colorValue;
 }
-`
-let fsSource=`
-precision mediump float;
-uniform sampler2D u_image;
-varying vec2 v_texCoord;
+`;
+
+const fsSource = `
+varying lowp vec4 vColor;
 void main() {
-   gl_FragColor = texture2D(u_image, v_texCoord);
+  gl_FragColor = vColor;
 }
-`
-function main() {
-  var image = new Image();
-  image.src = "./img/timg.jpg";  // MUST BE SAME DOMAIN!!!
-  image.onload = function() {
-    render(image);
-  }
-}
+`;
 
 function createShader(gl, type, source) {
   //创建着色器
@@ -53,6 +41,7 @@ function createShader(gl, type, source) {
   console.error('An error occurred compiling the shaders: ' + gl.getShaderInfoLog(shader));
   gl.deleteShader(shader);
 }
+
 function createProgram(gl) {
   //创建着色器
   let vertexShader = createShader(gl, gl.VERTEX_SHADER, vsSource);
@@ -68,123 +57,139 @@ function createProgram(gl) {
   gl.deleteProgram(shaderProgram);
   console.error("create Program is error");
 }
-function render(image) {
-  // Get A WebGL context
-  /** @type {HTMLCanvasElement} */
-  var canvas = document.getElementById("webgl");
-  var gl = canvas.getContext("webgl2");
-  if (!gl) {
-    return;
+
+function drawScene(gl, programInfo, buffer, colorBuffer) {
+  // gl.viewport(0,0,width,height); 
+  //计算矩阵转换
+  
+  let projectionMatrix = mat4.create();
+  mat4.perspective(projectionMatrix,
+    45 * Math.PI / 180,
+    width / height,
+    0.1,
+    200.0);
+
+  //此处属于当前对象的投影矩阵
+  // const modelViewMatrix = mat4.create();
+
+  // mat4.translate(modelViewMatrix, // 输出矩阵
+  //   modelViewMatrix, // 转换矩阵(缩放，旋转，切变，镜像，以及世界坐标等等处理)
+  //   [-1.0, 0.0, -6.0]);//做平移处理
+
+  //指定定点参数及数据格式
+  // 告诉属性怎么从positionBuffer中读取数据 (ARRAY_BUFFER)
+  var size = 2; // 每次迭代运行提取3个单位数据
+  var type = gl.FLOAT; // 每个单位的数据类型是32位浮点型
+  var normalize = false; // 不需要归一化数据
+  var stride = 0; // 0 = 移动单位数量 * 每个单位占用内存（sizeof(type)）
+  // 每次迭代运行运动多少内存到下一个数据开始点
+  var offset = 0; // 从缓冲起始位置开始读取
+  //起初忘了在这里重新绑定数据。导致后面计算的角度发生错误。
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.vertexAttribPointer(
+    programInfo.attribLocations.vertexPosition, size, type, normalize, stride, offset)
+  //启用定点参数
+  gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
+
+  //起初忘了在这里重新绑定数据。导致后面计算的角度发生错误。
+  gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+  gl.vertexAttribPointer(programInfo.attribLocations.colorValue, 4, type, normalize, stride, offset)
+  gl.enableVertexAttribArray(programInfo.attribLocations.colorValue);
+  //设置shader程序
+  gl.useProgram(programInfo.program);
+  //指定一个uniform矩阵变量
+  gl.uniformMatrix4fv(
+    programInfo.uniformLocations.projectionMatrix,
+    false,
+    projectionMatrix);
+  // gl.uniformMatrix4fv(
+  //   programInfo.uniformLocations.modelViewMatrix,
+  //   false,
+  //   modelViewMatrix);
+  //指定绘制
+  render();
+}
+
+//构建buffer
+function initBuffer(gl) {
+  let buffer = gl.createBuffer();
+
+  var vertices = [
+    1.0, 1.0,
+    -1.0, 1.0,
+    1.0, -1.0,
+    -1.0, -1.0,
+  ];
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+  return buffer;
+}
+//构建颜色Buffer
+function initColorBuffer(gl) {
+  let colorBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+  var colors = [
+    1.0, 1.0, 1.0, 1.0, // 白色
+    1.0, 0.0, 0.0, 1.0, // 红色
+    0.0, 1.0, 0.0, 1.0, // 绿色
+    0.0, 0.0, 1.0, 1.0 // 蓝色
+  ];
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+  return colorBuffer;
+}
+
+
+function mian() {
+  let canvas = document.querySelector("#webgl");
+  gl = canvas.getContext("webgl2");
+  gl.clearColor(0.0, 0.0, 0.0, 1.0)
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  const shaderProgram = createProgram(gl);
+  //简单的封装便于使用
+  const programInfo = {
+    program: shaderProgram,
+    attribLocations: {
+      vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
+      colorValue: gl.getAttribLocation(shaderProgram, "colorValue")
+    },
+    uniformLocations: {
+      projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
+      modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+    },
+  };
+  //设置视角比例
+  var buffer = initBuffer(gl);
+  var colorBuffer = initColorBuffer(gl);
+  drawScene(gl, programInfo, buffer, colorBuffer);
+
+  function rerender() {
+    if (tx > 2.0) {
+      tx = -1.0;
+    }
+    tx += 0.004;
+    
+    const modelViewMatrix = mat4.create();
+    mat4.translate(modelViewMatrix, // 输出矩阵
+      modelViewMatrix, // 转换矩阵(缩放，旋转，切变，镜像，以及世界坐标等等处理)
+      [tx, ty, -6.0]); //做平移处理
+    gl.uniformMatrix4fv(
+      programInfo.uniformLocations.modelViewMatrix,
+      false,
+      modelViewMatrix);
+    
+    render();
+    requestAnimationFrame(rerender);
   }
+  rerender();
+}
 
-  // 创建shaderProgram
-  const program = createProgram(gl);
+mian();
 
-  // 获取.
-  var positionLocation = gl.getAttribLocation(program, "a_position");
-  var texcoordLocation = gl.getAttribLocation(program, "a_texCoord");
 
-  // 创建一个位置buffer
-  var positionBuffer = gl.createBuffer();
-
-  // 绑定位置buffer
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-  // Set a rectangle the same size as the image.
-  setRectangle(gl, 0, 0, image.width, image.height);
-
-  // 创建一个纹理buffer.
-  var texcoordBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-      0.0,  0.0,
-      1.0,  0.0,
-      0.0,  1.0,
-      0.0,  1.0,
-      1.0,  0.0,
-      1.0,  1.0,
-  ]), gl.STATIC_DRAW);
-
-  // 创建一个纹理并绑定.
-  var texture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-
-  // Set the parameters so we can render any size image.
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-
-  // Upload the image into the texture.
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-
-  // lookup uniforms
-  var resolutionLocation = gl.getUniformLocation(program, "u_resolution");
-
-  // webglUtils.resizeCanvasToDisplaySize(gl.canvas);
-
-  // 设置viewport
-  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-
-  // 清除颜色
-  gl.clearColor(0, 0, 0, 0);
-  gl.clear(gl.COLOR_BUFFER_BIT);
-
-  // 通知gl使用Program
-  gl.useProgram(program);
-
-  // Turn on the position attribute
-  gl.enableVertexAttribArray(positionLocation);
-
-  // Bind the position buffer.
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-
-  // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
-  var size = 2;          // 2 components per iteration
-  var type = gl.FLOAT;   // the data is 32bit floats
-  var normalize = false; // don't normalize the data
-  var stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
-  var offset = 0;        // start at the beginning of the buffer
-  gl.vertexAttribPointer(
-      positionLocation, size, type, normalize, stride, offset)
-
-  // Turn on the teccord attribute
-  gl.enableVertexAttribArray(texcoordLocation);
-
-  // Bind the position buffer.
-  gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
-
-  // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
-  var size = 2;          // 2 components per iteration
-  var type = gl.FLOAT;   // the data is 32bit floats
-  var normalize = false; // don't normalize the data
-  var stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
-  var offset = 0;        // start at the beginning of the buffer
-  gl.vertexAttribPointer(
-      texcoordLocation, size, type, normalize, stride, offset)
-
-  // set the resolution
-  gl.uniform2f(resolutionLocation, gl.canvas.width, gl.canvas.height);
-
-  // 绘制.
-  var primitiveType = gl.TRIANGLES;
-  var offset = 0;
-  var count = 6;
+function render() {
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  var primitiveType = gl.TRIANGLE_STRIP;
+  var offset = 0; //数据偏移
+  var count = 4; //几个数据
   gl.drawArrays(primitiveType, offset, count);
 }
-
-function setRectangle(gl, x, y, width, height) {
-  var x1 = x;
-  var x2 = x + width;
-  var y1 = y;
-  var y2 = y + height;
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-     x1, y1,
-     x2, y1,
-     x1, y2,
-     x1, y2,
-     x2, y1,
-     x2, y2,
-  ]), gl.STATIC_DRAW);
-}
-
-main();

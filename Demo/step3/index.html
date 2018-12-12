@@ -6,24 +6,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>Document</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-    }
-
-    #webgl {
-      display: block;
-      box-sizing: content-box;
-      width: 100%;
-      height: 100%;
-    }
-  </style>
 </head>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+  }
+
+  #webgl {
+    display: block;
+    box-sizing: content-box;
+    width: 100%;
+    height: 100%;
+  }
+</style>
 
 <body>
-  <canvas id="webgl"></canvas>
+  <canvas id="webgl">
+    Your browser doesn't appear to support the HTML5 <code>&lt;canvas&gt;</code> element
+  </canvas>
+
 </body>
+<script src="./gl-matrix.js"></script>
 <script src="./index.js"></script>
 
 </html>
